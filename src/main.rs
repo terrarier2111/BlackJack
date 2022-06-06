@@ -4,7 +4,42 @@ use std::str::FromStr;
 use rand::Rng;
 
 fn main() {
-    start_game(vec![(5.0, String::from("Franz")), (3.0, String::from("Jürgen"))]);
+    fn prompt_player() -> (f64, String) {
+        let name = input("How do you want to be called?\nPlease call me: ".to_owned()).unwrap();
+        let mut money = 0.0;
+        loop {
+            let mut input = input("How much money do you want to bet?\nI want to bet: ".to_owned()).unwrap();
+            if let Ok(amount) = input.parse::<f64>() {
+                money = amount;
+                break;
+            } else {
+                println!("Sorry, but i couldn't understand that!\nTry using a decimal number like \"1.53\" instead!");
+            }
+        }
+        (money, name)
+    }
+
+    fn prompt_continue() -> bool {
+        loop {
+            let mut input = input("Is there another user?\n".to_owned()).unwrap()
+                .to_lowercase()
+                .replace("no", "false")
+                .replace("yes", "true");
+            if let Ok(decision) = bool::from_str(input.as_str()) {
+                return decision;
+            } else {
+                println!("Sorry, but i couldn't understand that!\nTry using \"yes\" or \"no\" instead!");
+            }
+        }
+    }
+
+    let mut players = vec![prompt_player()];
+
+    while prompt_continue() {
+        players.push(prompt_player());
+    }
+
+    start_game(players);
 }
 
 // when a player wins by going over the dealers score, they get an additional 1.5 times their bet (money *= 2.5)
@@ -64,12 +99,12 @@ fn start_game(/*min_bet: f64, */player_entries: Vec<(f64, String)>) {
                     }
                 }
                 if draw {
-                    drew = true;
                     player.add_card(card_pool.gen_decrementing());
                     if player.points() > MAX_VAL {
-                        println!("Unfortunately, {} you busted lost {}!", player.name, player.money);
+                        println!("Unfortunately, {} you busted with {} points and lost {}!", player.name, player.points(), player.money);
                         player.money = 0.0;
                     } else {
+                        drew = true;
                         println!("You now have {} points, {}.", player.points(), player.name);
                     }
                 }
@@ -93,11 +128,13 @@ fn start_game(/*min_bet: f64, */player_entries: Vec<(f64, String)>) {
         }
     } else {
         for player in &mut players {
-            if player.points() <= MAX_VAL && player.points() > dealer.points {
-                println!("Congratz, {} you won {}!", player.name, player.money);
-                player.money *= 2.5;
-            } else {
-                println!("Unfortunately you lost {}, {}.", player.money, player.name);
+            if player.points() <= MAX_VAL {
+                if player.points() > dealer.points {
+                    println!("Congratz, {} you beat the dealer and won {}!", player.name, player.money);
+                    player.money *= 2.5;
+                } else {
+                    println!("Unfortunately the bank has more points than you (it has {} points) you lost {}, {}.", dealer.points, player.money, player.name);
+                }
             }
         }
     }
@@ -203,6 +240,7 @@ impl WeightedProbability {
     fn gen_decrementing(&mut self) -> u8 {
         let mut num = rand::thread_rng().gen_range(0..self.all);
         for (value, weight) in self.entries.iter_mut() {
+            // FIXME: remove 0 entries
             if num < *weight {
                 *weight -= 1;
                 self.all -= 1;
