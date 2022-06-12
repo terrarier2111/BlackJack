@@ -120,7 +120,6 @@ fn start_game(player_entries: Vec<(f64, String)>) {
                         );
                         player.money = 0.0;
                     } else {
-                        println!("you drew: {}", val);
                         did_draw = true;
                         println!("You now have {} points, {}.", player.points(), player.name);
                     }
